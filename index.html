@@ -20,6 +20,7 @@ header{position:absolute;z-index:8;left:60px;right:60px;top:40px;height:60px;dis
 .bottom{position:absolute;z-index:9;left:60px;right:60px;bottom:52px;display:flex;align-items:center;gap:35px;height:55px}.progress{display:flex;gap:9px;align-items:center}.progress button{width:28px;height:36px;background:none;position:relative;padding:0}.progress button:after{content:'';width:7px;height:7px;border-radius:50%;position:absolute;top:14px;left:10px;background:var(--border)}.progress button.done:after{background:var(--muted)}.progress button.current:after{background:var(--active);width:10px;height:10px;left:8px;top:12px;box-shadow:0 0 0 5px color-mix(in srgb,var(--active) 13%,transparent)}.step-count{font-size:13px;color:var(--muted);width:52px;font-variant-numeric:tabular-nums}.step-count b{color:var(--text);font-weight:500}.controls{display:flex;gap:7px;margin-left:auto;transition:opacity .3s}.icon-button{width:42px;height:42px;border:1px solid var(--border);border-radius:50%;background:var(--veil);display:grid;place-items:center}.icon-button:hover{background:var(--land)}.icon-button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}.next-button{background:var(--active);border-color:var(--active);color:var(--bg)}.next-button:hover{filter:brightness(1.15);background:var(--active)}
 .footer{position:absolute;bottom:20px;left:60px;right:60px;display:flex;justify-content:space-between;z-index:8;color:var(--subtle);font-size:11px}.footer button{color:var(--muted);background:transparent;padding:0;font-size:11px}.footer a{text-decoration:none}.footer a:hover{text-decoration:underline}.keyhint{transition:opacity .3s}.idle .keyhint{opacity:0}.status{position:absolute;left:60px;bottom:127px;color:var(--muted);font-size:12px;z-index:8}.status:empty{display:none}
 dialog{color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:30px;max-width:760px;width:90vw;max-height:80vh;overflow:auto;font:16px/1.5 Archivo,sans-serif}dialog::backdrop{background:#05101dcc;backdrop-filter:blur(6px)}dialog h2{font-stretch:75%;font-size:32px;margin:0 0 18px}dialog .close{float:right;border:1px solid var(--border);background:var(--land);border-radius:50%;width:36px;height:36px;font-size:20px}dialog table{border-collapse:collapse;width:100%;font-size:13px;margin:18px 0}dialog td,dialog th{padding:9px 7px;border-bottom:1px solid var(--border);text-align:left}dialog th{color:var(--muted);font-weight:500}dialog p{color:var(--muted)}dialog kbd{font:14px Archivo;border:1px solid var(--border);padding:2px 7px;border-radius:3px}dialog .help-grid{display:grid;grid-template-columns:100px 1fr;gap:13px}dialog a{color:var(--europa)}
+.narrative[data-dense=true] .place-row{margin-top:15px}.narrative[data-dense=true] .place-row strong{font-size:17px}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
 <script type="text/plain" id="third-party-licenses">
@@ -371,6 +372,8 @@ let map=null,mapReady=false,fallback=true,frame=0,lastTime=0,geoCache=[],idleTim
 let camera={center:[9.215,45.5176],zoom:15.15},cameraTween=null;
 const WORLD=topojson.feature(window.ECC_WORLD,window.ECC_WORLD.objects.countries);
 const glyphs={
+ giornale:'<path d="M4 3h14v18H4zM18 7h3v12a2 2 0 0 1-2 2M7 7h8M7 11h3v4H7zM13 11h2m-2 4h2M7 18h8"/>',
+ libro:'<path d="M12 5v16M12 5Q7 1 2 4v15q5-3 10 1 5-4 10-1V4q-5-3-10 1ZM5 8l4 1m6 0 4-1M5 12l4 1m6 0 4-1"/>',
  campus:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>',
  cubo:'<path d="m12 2 9 5v10l-9 5-9-5V7zm0 10 9-5M3 7l9 5v10"/>',
  sipario:'<path d="M3 20V9a9 9 0 0 1 18 0v11M3 5h18M5 5q3 8 0 15m14-15q-3 8 0 15M3 20h5m8 0h5"/>',
@@ -394,12 +397,13 @@ addEventListener('resize',resize);resize();
 function showControls(){ $('stage').classList.remove('idle');clearTimeout(idleTimer);idleTimer=setTimeout(()=>{if(!document.querySelector('dialog[open]'))$('stage').classList.add('idle')},3000); }
 addEventListener('pointermove',showControls,{passive:true});addEventListener('pointerdown',showControls,{passive:true});addEventListener('focusin',showControls);showControls();
 function updateText(){
+ document.querySelector('.narrative').dataset.dense=state.step<2;
  const s=D.passi[state.step];document.documentElement.style.setProperty('--active',color(s.livello));
  $('levelName').textContent=s.nome;$('chapterNo').textContent=`0${state.step+1} / 05`;
  $('headline').innerHTML=s.titolo.map(t=>`<span>${t}</span>`).join('');$('lead').textContent=s.frase;
  let html='';
  if(state.step===4){html='<div class="places"><div class="place-row">'+icon('campus',color(2))+'<div><strong>Milano · ECIE</strong><small>Creatività, design e imprenditorialità</small></div></div><div class="place-row">'+icon('onda',color(3))+'<div><strong>Venezia · Ca’ Foscari</strong><small>Cultura, patrimonio e management</small></div></div></div><p class="project-note">Sette origini internazionali, un orizzonte condiviso.</p>'}
- else if(state.step===1){html='<div class="places">'+[['sedia','Design','Triennale · Tortona'],['ago','Moda','Quadrilatero della moda'],['suono','Comunicazione','Porta Nuova'],['cornice','Patrimonio artistico','Brera']].map(r=>`<div class="place-row">${icon(r[0])}<div><strong>${r[1]}</strong><small>${r[2]}</small></div></div>`).join('')+'</div>'}
+ else if(state.step===1){html='<div class="places">'+[['sedia','Design','Triennale · Tortona'],['ago','Moda','Quadrilatero della moda'],['suono','Comunicazione','Porta Nuova'],['cornice','Patrimonio artistico','Brera'],['libro','Editoria','Fondazione Feltrinelli']].map(r=>`<div class="place-row">${icon(r[0])}<div><strong>${r[1]}</strong><small>${r[2]}</small></div></div>`).join('')+'</div>'}
  else{html='<div class="places">'+s.luoghi.map(id=>{const p=places[id];return `<div class="place-row">${icon(p.glifo)}<div><strong>${p.id==='bicocca'?'Milano-Bicocca':p.nome}</strong><small>${p.sede||p.descrizione}</small></div></div>`}).join('')+'</div>';if(state.step===2||state.step===3){const p=places[s.luoghi[0]];html+=`<div class="course-detail"><small>${state.step===2?'Il progetto di doppio titolo':'Il percorso internazionale'}</small>${p.corso}</div><p class="project-note">${state.step===2?'Milano: creatività, design e impresa. Venezia: cultura, patrimonio e management.':'Un percorso da sviluppare: mobilità Erasmus e doppio titolo.'}</p>`}}
  $('details').innerHTML=html;
  $('progress').innerHTML=D.passi.map((p,i)=>`<button data-step="${i}" class="${i===state.step?'current':i<state.step?'done':''}" aria-label="Passo ${i+1}: ${p.nome}" ${i===state.step?'aria-current="step"':''}></button>`).join('');
@@ -483,7 +487,7 @@ function visiblePlaces(){
  if(state.step===1)return [places.bicocca,...D.luoghi.filter(p=>p.livello===2)];
  return [places.bicocca,places.venezia,...(state.step>=3?[places.rotterdam]:[])];
 }
-const localOffsets={bicocca:[32,45],hangar:[34,-10],pirelli:[-38,-13],arcimboldi:[34,7],porta:[38,-18],brera:[35,-40],moda:[39,37],triennale:[-36,10],tortona:[32,14],venezia:[36,18],rotterdam:[32,-12]};
+const localOffsets={bicocca:[32,45],hangar:[34,-10],pirelli:[-38,15],sole24ore:[-38,-30],arcimboldi:[34,7],porta:[38,-18],feltrinelli:[-40,-12],brera:[35,-40],moda:[39,37],triennale:[-36,10],tortona:[32,14],venezia:[36,18],rotterdam:[32,-12]};
 function marker(p,xy,offset,small=false,nameOverride=null,descriptionOverride=null,opacity=1){
  const c=color(p.livello),[x,y]=xy,[ox,oy]=offset,anchor=ox<0?'end':'start';const label=nameOverride||p.breve,desc=descriptionOverride===null?p.descrizione:descriptionOverride;
  if(state.step===4){const tint=p.id==='bicocca'?color(2):c;return `<g data-place="${p.id}"><circle cx="${x}" cy="${y}" r="4" fill="${tint}" stroke="${css('bg')}" stroke-width="1.5"/><path d="M${x} ${y}L${x+ox*.72} ${y+oy-5}" fill="none" stroke="${tint}" opacity=".65"/><text class="map-label small" x="${x+ox}" y="${y+oy}" text-anchor="${anchor}">${label}</text></g>`;}
